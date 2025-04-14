@@ -1,78 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
 
-const App = () => {
-  const [randomNumber, setRandomNumber] = useState(0);
+export default function App() {
+  const [randomNumber, setRandomNumber] = useState(generateRandomNumber());
   const [guess, setGuess] = useState('');
-  const [attempts, setAttempts] = useState(0);
+  const [attempts, setAttempts] = useState(5);
   const [message, setMessage] = useState('Tente adivinhar o número entre 1 e 100');
   const [gameHistory, setGameHistory] = useState([]);
 
-  useEffect(() => {
-    startNewGame();
-  }, []);
+  // Gera um número aleatório entre 1 e 100
+  function generateRandomNumber() {
+    return Math.floor(Math.random() * 100) + 1;
+  }
 
-  const startNewGame = () => {
-    const newNumber = Math.floor(Math.random() * 100) + 1;
-    setRandomNumber(newNumber);
+  // Reinicia o jogo com um novo número
+  function resetGame() {
+    setRandomNumber(generateRandomNumber());
+    setAttempts(5);
     setGuess('');
-    setAttempts(0);
-    setMessage('Tente adivinhar o número entre 1 e 100');
-  };
+    setMessage('Novo jogo! Tente adivinhar o número entre 1 e 100');
+    setGameHistory([]);
+  }
 
-  const handleGuess = () => {
-    // Verifica se já atingiu o limite de tentativas
-    if (attempts >= 5) {
-      Alert.alert(
-        'Fim de jogo',
-        `Suas tentativas acabaram! O número era ${randomNumber}.`,
-        [{ text: 'OK', onPress: startNewGame }]
-      );
-      return;
-    }
-
-    const guessedNumber = parseInt(guess, 10);
+  // Verifica o palpite do jogador
+  function checkGuess() {
+    const guessedNumber = parseInt(guess);
     
-    if (isNaN(guessedNumber)) {
-      setMessage('Por favor, digite um número válido!');
-      return;
-    }
-    
-    if (guessedNumber < 1 || guessedNumber > 100) {
-      setMessage('O número deve estar entre 1 e 100!');
+    if (isNaN(guessedNumber) || guessedNumber < 1 || guessedNumber > 100) {
+      Alert.alert('Erro', 'Por favor, digite um número válido entre 1 e 100');
       return;
     }
 
-    const newAttempts = attempts + 1;
-    setAttempts(newAttempts);
+    const newHistory = [...gameHistory, guessedNumber];
+    setGameHistory(newHistory);
 
     if (guessedNumber === randomNumber) {
-      const historyEntry = `Você acertou em ${newAttempts} tentativas! Número: ${randomNumber}`;
-      setGameHistory(prev => [...prev, historyEntry]);
-      
-      Alert.alert(
-        'Parabéns!',
-        `Você acertou o número ${randomNumber} em ${newAttempts} tentativas!`,
-        [{ text: 'OK', onPress: startNewGame }]
-      );
+      Alert.alert('Parabéns!', `Você acertou o número ${randomNumber}!`);
+      resetGame();
     } else {
-      const hint = guessedNumber < randomNumber ? 'maior' : 'menor';
-      const remaining = 5 - newAttempts;
-      setMessage(`Errado! O número é ${hint} que ${guessedNumber}. Tentativas restantes: ${remaining}`);
-      setGuess('');
-      
-      if (remaining === 0) {
-        const historyEntry = `Você perdeu! O número era ${randomNumber}`;
-        setGameHistory(prev => [...prev, historyEntry]);
-        
-        Alert.alert(
-          'Fim de jogo',
-          `Suas tentativas acabaram! O número era ${randomNumber}.`,
-          [{ text: 'OK', onPress: startNewGame }]
+      const remainingAttempts = attempts - 1;
+      setAttempts(remainingAttempts);
+
+      if (remainingAttempts === 0) {
+        Alert.alert('Fim de jogo', `Suas tentativas acabaram! O número era ${randomNumber}.`);
+        resetGame();
+      } else {
+        setMessage(
+          `O número é ${guessedNumber < randomNumber ? 'maior' : 'menor'} que ${guessedNumber}. ` +
+          `Você tem ${remainingAttempts} tentativa(s) restante(s).`
         );
+        setGuess('');
       }
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -89,20 +69,63 @@ const App = () => {
       
       <Button
         title="Enviar palpite"
-        onPress={handleGuess}
-        disabled={attempts >= 5} // Desabilita o botão após 5 tentativas
+        onPress={checkGuess}
       />
       
-      <Text style={styles.attempts}>Tentativas: {attempts}/5</Text>
+      <Text style={styles.attempts}>Tentativas restantes: {attempts}</Text>
       
-      <View style={styles.history}>
-        <Text style={styles.historyTitle}>Histórico:</Text>
-        {gameHistory.slice(-5).map((entry, index) => ( // Mostra apenas os últimos 5 resultados
-          <Text key={index} style={styles.historyEntry}>{entry}</Text>
-        ))}
-      </View>
+      <Text style={styles.historyTitle}>Histórico:</Text>
+      {gameHistory.map((item, index) => (
+        <Text key={index} style={styles.historyItem}>
+          Tentativa {index + 1}: {item} - {item < randomNumber ? 'Baixo' : 'Alto'}
+        </Text>
+      ))}
     </View>
   );
-};
+}
 
-// Mantenha os estilos do código anterior
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#cfe8bc',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  message: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#22300B',
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    backgroundColor: 'white',
+  },
+  attempts: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#22300B',
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 30,
+    marginBottom: 10,
+  },
+  historyItem: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
+});
